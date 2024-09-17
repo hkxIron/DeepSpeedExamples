@@ -105,7 +105,7 @@ def parse_args():
     )
     parser.add_argument(
         "--lr_scheduler_type",
-        type=SchedulerType,
+        type=SchedulerType, # 可以用定义的枚举
         default="cosine",
         help="The scheduler type to use.",
         choices=[
@@ -228,11 +228,9 @@ def main():
                                     enable_tensorboard=args.enable_tensorboard,
                                     tb_path=args.tensorboard_path,
                                     tb_name="step2_model")
-    ds_config[
-        'train_micro_batch_size_per_gpu'] = args.per_device_train_batch_size
-    ds_config[
-        'train_batch_size'] = args.per_device_train_batch_size * torch.distributed.get_world_size(
-        ) * args.gradient_accumulation_steps
+    ds_config['train_micro_batch_size_per_gpu'] = args.per_device_train_batch_size
+    ds_config['train_batch_size'] = args.per_device_train_batch_size * torch.distributed.get_world_size() \
+                                    * args.gradient_accumulation_steps
 
     # If passed along, set the training seed now.
     set_random_seed(args.seed)

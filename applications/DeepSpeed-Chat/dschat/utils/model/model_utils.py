@@ -135,6 +135,7 @@ def create_critic_model(model_name_or_path,
     print_rank_0(f">Creating model from_config took {end - start} seconds",
                  None)
 
+    # critic model是从reward model初始化的
     critic_model = RewardModel(
         critic_model,
         tokenizer,

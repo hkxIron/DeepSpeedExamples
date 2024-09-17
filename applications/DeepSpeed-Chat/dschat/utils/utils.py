@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
+from typing import *
 import os
 import torch
 import random
@@ -32,7 +33,7 @@ def is_rank_0():
         return True
 
 
-def to_device(batch, device):
+def to_device(batch:Dict[str, Any], device):
     output = {}
     for k, v in batch.items():
         try:
@@ -297,6 +298,7 @@ def save_zero_three_model(model_ema, global_rank, save_dir, zero_stage=0):
         for k, v in model_to_save.named_parameters():
 
             if hasattr(v, 'ds_id'):
+                # 每个gpu只有部分参数，因此需要收集到cpu后再进行保存,只在rank0节点保存
                 with deepspeed.zero.GatheredParameters(_z3_params_to_fetch([v
                                                                             ]),
                                                        enabled=zero_stage_3):

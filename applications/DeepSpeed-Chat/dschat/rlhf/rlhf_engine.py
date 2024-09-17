@@ -39,24 +39,24 @@ def log_init(model_name, stime=None):
 
 class DeepSpeedRLHFEngine():
 
-    def __init__(self, actor_model_name_or_path, critic_model_name_or_path,
-                 tokenizer, args, num_total_iters):
+    def __init__(self,
+                 actor_model_name_or_path,
+                 critic_model_name_or_path,
+                 tokenizer,
+                 args,
+                 num_total_iters):
         self.args = args
         self.num_total_iters = num_total_iters
         self.tokenizer = tokenizer
 
-        self.actor = self._init_actor(
-            actor_model_name_or_path=actor_model_name_or_path)
-        self.ref = self._init_ref(
-            actor_model_name_or_path=actor_model_name_or_path)
+        self.actor = self._init_actor(actor_model_name_or_path=actor_model_name_or_path)
+        self.ref = self._init_ref(actor_model_name_or_path=actor_model_name_or_path)
         self.actor_ema = None
         if self.args.enable_ema:
             self.actor_ema = self._init_ema(
                 actor_model_name_or_path=actor_model_name_or_path)
-        self.critic = self._init_critic(
-            critic_model_name_or_path=critic_model_name_or_path)
-        self.reward = self._init_reward(
-            critic_model_name_or_path=critic_model_name_or_path)
+        self.critic = self._init_critic(critic_model_name_or_path=critic_model_name_or_path)
+        self.reward = self._init_reward(critic_model_name_or_path=critic_model_name_or_path)
         if self.args.critic_gradient_checkpointing:
             self.critic.gradient_checkpointing_enable()
 
@@ -139,13 +139,12 @@ class DeepSpeedRLHFEngine():
         if zero_stage != 3:
             # If actor is ZeRO-3 then we use it for everything, otherwise assume we have enough memory for ref model
             zero_stage = 0
+        # ds_config: 即deepspeed config
         ds_config = get_eval_ds_config(self.args.offload_reference_model,
                                        self.args.dtype, zero_stage)
-        ds_config[
-            'train_micro_batch_size_per_gpu'] = self.args.per_device_training_batch_size
+        ds_config['train_micro_batch_size_per_gpu'] = self.args.per_device_training_batch_size
         #TODO(jeff): we should probably set grad accumlation steps here as well for clarity
-        ds_config[
-            'train_batch_size'] = self.args.per_device_training_batch_size * torch.distributed.get_world_size(
+        ds_config['train_batch_size'] = self.args.per_device_training_batch_size * torch.distributed.get_world_size(
             ) * self.args.gradient_accumulation_steps_actor
 
         ref_model = create_hf_model(AutoModelForCausalLM,

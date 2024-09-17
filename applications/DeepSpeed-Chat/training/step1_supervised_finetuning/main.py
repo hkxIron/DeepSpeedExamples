@@ -304,7 +304,7 @@ def main():
         except:
             pass
         try:
-            perplexity = torch.exp(losses).item()
+            perplexity = torch.exp(losses).item() # 平均交叉熵作为e的指数，即是混杂度
         except OverflowError:
             perplexity = float("inf")
         return perplexity, losses.item()

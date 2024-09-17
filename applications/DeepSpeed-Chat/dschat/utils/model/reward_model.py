@@ -148,7 +148,7 @@ class RewardModel(nn.Module):
             use_cache=use_cache,
             **kwargs)
         hidden_states = transformer_outputs[0]
-        values = self.v_head(hidden_states).squeeze(-1)
+        values = self.v_head(hidden_states).squeeze(-1) # v_head输出维度为1
         if return_value_only:
             return values
         else:
@@ -157,16 +157,14 @@ class RewardModel(nn.Module):
             assert prompt_length > 1, "prompt_length must be greater than 1 to help select the end score"
             bs = values.size(0)
             seq_len = input_ids.shape[1]
-            chosen_end_scores = [
-            ]  # we use this name for consistency with the original forward function
+            chosen_end_scores = []  # we use this name for consistency with the original forward function
             for i in range(bs):
                 input_id = input_ids[i]
                 value = values[i]
 
                 c_inds = (input_id[prompt_length:] == self.PAD_ID).nonzero()
                 # here we only use the answer part of the sequence so we do not need to care about the padding at the beginning
-                c_ind = c_inds[0].item() + prompt_length if len(
-                    c_inds) > 0 else seq_len
+                c_ind = c_inds[0].item() + prompt_length if len(c_inds) > 0 else seq_len
                 chosen_end_scores.append(value[c_ind - 1])
             return {
                 "values": values,

@@ -376,8 +376,7 @@ def parse_args():
         print(
             f"Tensorboard logs going to: {args.tensorboard_path}/step3_tensorboard_logs"
         )
-        writer = SummaryWriter(
-            f"{args.tensorboard_path}/step3_tensorboard_logs")
+        writer = SummaryWriter(f"{args.tensorboard_path}/step3_tensorboard_logs")
 
     # Validate settings
     if args.inference_tp_size > 1:
@@ -410,21 +409,18 @@ def create_datasets(args, tokenizer, train_phase=3):
     if args.local_rank == -1:
         prompt_train_sampler = RandomSampler(prompt_train_dataset)
         if unsupervised_training_enabled:
-            unsupervised_train_sampler = RandomSampler(
-                unsupervised_train_dataset)
+            unsupervised_train_sampler = RandomSampler(unsupervised_train_dataset)
     else:
         prompt_train_sampler = DistributedSampler(prompt_train_dataset)
         if unsupervised_training_enabled:
-            unsupervised_train_sampler = DistributedSampler(
-                unsupervised_train_dataset)
-    prompt_train_dataloader = DataLoader(
-        prompt_train_dataset,
+            unsupervised_train_sampler = DistributedSampler(unsupervised_train_dataset)
+    prompt_train_dataloader = DataLoader(prompt_train_dataset,
         collate_fn=data_collator,
         sampler=prompt_train_sampler,
         batch_size=args.per_device_generation_batch_size)
+
     if unsupervised_training_enabled:
-        unsupervised_train_dataloader = DataLoader(
-            unsupervised_train_dataset,
+        unsupervised_train_dataloader = DataLoader(unsupervised_train_dataset,
             collate_fn=default_data_collator,
             sampler=unsupervised_train_sampler,
             batch_size=args.per_device_generation_batch_size)
@@ -471,8 +467,7 @@ def main():
                                   fast_tokenizer=True,
                                   add_special_tokens=additional_special_tokens)
 
-    prompt_train_dataloader, unsupervised_train_dataloader, num_total_iters = create_datasets(
-        args=args, tokenizer=tokenizer, train_phase=3)
+    prompt_train_dataloader, unsupervised_train_dataloader, num_total_iters = create_datasets(args=args, tokenizer=tokenizer, train_phase=3)
 
     # RLHF engine is responsible for creating models, loading checkpoints, ds-initialize models/optims/lr-schedulers
     rlhf_engine = DeepSpeedRLHFEngine(
@@ -507,7 +502,7 @@ def main():
     step_average_reward = 0.
     ema_reward_score = ExponentialMovingAverage()
 
-    for epoch in range(args.num_train_epochs):
+    for epoch in range(args.num_train_epochs): # 3个epoch
         print_rank_0(
             f"Beginning of Epoch {epoch+1}/{args.num_train_epochs}, Total Generation Batches {min(len(prompt_train_dataloader), len(unsupervised_train_dataloader))}",
             args.global_rank)
@@ -531,8 +526,7 @@ def main():
                 batch_unsupervised = to_device(batch_unsupervised, device)
                 unsup_dataset = unsup_mini_dataset.add(batch_unsupervised)
             else:
-                unsup_dataset = unsup_mini_dataset.add(
-                    [[None] * args.per_device_generation_batch_size])
+                unsup_dataset = unsup_mini_dataset.add([[None] * args.per_device_generation_batch_size])
 
             exp_dataset = exp_mini_dataset.add(out)
 
@@ -545,16 +539,14 @@ def main():
                     rlhf_engine.actor.gradient_checkpointing_enable()
 
                 for ppo_ep in range(args.ppo_epochs):
-                    for i, (exp_data, unsup_data) in enumerate(
-                            zip(exp_dataset, unsup_dataset)):
+                    for i, (exp_data, unsup_data) in enumerate(zip(exp_dataset, unsup_dataset)):
                         actor_loss, critic_loss = trainer.train_rlhf(exp_data)
                         actor_loss_sum += actor_loss.item()
                         critic_loss_sum += critic_loss.item()
                         average_reward += exp_data["rewards"].mean()
 
                         if unsupervised_training_enabled:
-                            unsup_loss = trainer.train_unsupervised(
-                                unsup_data, args.unsup_coef)
+                            unsup_loss = trainer.train_unsupervised(unsup_data, args.unsup_coef)
                             unsup_loss_sum += unsup_loss.item()
 
                         inner_iter += 1
@@ -591,8 +583,7 @@ def main():
                     "-------------------------------------------------------------------------------------",
                     args.global_rank)
 
-                if args.enable_tensorboard and torch.distributed.get_rank(
-                ) == 0:
+                if args.enable_tensorboard and torch.distributed.get_rank() == 0:
                     writer.add_scalar('reward',
                                       average_reward / inner_iter,
                                       global_step=step)

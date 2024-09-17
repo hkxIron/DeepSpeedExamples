@@ -30,12 +30,11 @@ class LinearLayer_LoRA(nn.Module):
 
         try:
             # for zero stage 3
-            rows, columns = weight.ds_shape
+            rows, columns = weight.ds_shape # deepspeed
         except:
             rows, columns = weight.shape
-        self.lora_right_weight = nn.Parameter(torch.zeros(
-            columns,
-            lora_dim))  # apply transpose so in forward we do not need to
+        # W = A*B = left * right
+        self.lora_right_weight = nn.Parameter(torch.zeros(columns, lora_dim))  # apply transpose so in forward we do not need to
         self.lora_left_weight = nn.Parameter(torch.zeros(lora_dim, rows))
         self.lora_scaling = lora_scaling / lora_dim
 
@@ -76,13 +75,19 @@ class LinearLayer_LoRA(nn.Module):
         self.fuse_lora = False
 
     def forward(self, input):
+        # lora已经融合进去了
         if self.fuse_lora:
+            # y = x*A^T+b
             return F.linear(input, self.weight, self.bias)
         else:
-            return F.linear(
-                input, self.weight,
-                self.bias) + (self.lora_dropout(input) @ self.lora_right_weight
-                              @ self.lora_left_weight) * self.lora_scaling
+            # y = x*A^T+b
+            origin_wx = F.linear(input, self.weight,self.bias)
+            lora_dropout= self.lora_dropout(input)
+            # y_lora = x*(left*right)^T+b
+            #        = x*right^T*left^T
+            y_lora = lora_dropout @ self.lora_right_weight @ self.lora_left_weight
+            return (origin_wx
+                    + y_lora * self.lora_scaling)
 
 
 # convert the linear layer to LoRA
@@ -97,8 +102,7 @@ def convert_linear_layer_to_lora(model,
             replace_name.append(name)
     for name in replace_name:
         module = recursive_getattr(model, name)
-        tmp = LinearLayer_LoRA(
-            module.weight, lora_dim, lora_scaling, lora_droppout,
+        tmp = LinearLayer_LoRA(module.weight, lora_dim, lora_scaling, lora_droppout,
             module.bias).to(module.weight.device).to(module.weight.dtype)
         recursive_setattr(model, name, tmp)
     return model
