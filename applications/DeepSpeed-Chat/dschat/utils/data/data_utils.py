@@ -3,7 +3,7 @@
 
 # DeepSpeed Team
 """
-Part of the code was adopted from https://github.com/microsoft/Megatron-DeepSpeed/blob/main/megatron/data/dataset_utils.py
+Part of the code was adopted from https://github.com/deepspeedai/Megatron-DeepSpeed/blob/main/megatron/data/dataset_utils.py
 """
 import torch
 from torch.utils.data import Dataset, Subset, ConcatDataset
@@ -211,12 +211,7 @@ def create_dataset_split(current_dataset, raw_dataset, train_phase, tokenizer,
                                          padding="max_length",
                                          truncation=True,
                                          return_tensors="pt")
-                chosen_token["input_ids"] = chosen_token["input_ids"]
-                chosen_token["attention_mask"] = chosen_token["attention_mask"]
                 chosen_dataset.append(chosen_token)
-
-                reject_token["input_ids"] = reject_token["input_ids"]
-                reject_token["attention_mask"] = reject_token["attention_mask"]
                 reject_dataset.append(reject_token)
         print(
             f'Creating dataset {raw_dataset.dataset_name_clean} for {train_phase=} size={len(chosen_dataset)}'
@@ -380,7 +375,9 @@ def create_prompt_dataset(local_rank,
         torch.save(train_dataset, train_fname)
         torch.save(eval_dataset, eval_fname)
     torch.distributed.barrier()
-    return torch.load(train_fname), torch.load(eval_fname)
+    return torch.load(train_fname,
+                      weights_only=False), torch.load(eval_fname,
+                                                      weights_only=False)
 
 
 class DataCollatorReward:

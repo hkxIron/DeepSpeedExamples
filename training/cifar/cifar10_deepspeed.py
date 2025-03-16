@@ -1,11 +1,12 @@
 import argparse
+import os
 
 import deepspeed
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-import torchvision.transforms as transforms
+from torchvision import transforms
 from deepspeed.accelerator import get_accelerator
 from deepspeed.moe.utils import split_params_into_different_moe_groups_for_optimizer
 
@@ -279,6 +280,8 @@ def test(model_engine, testset, local_device, target_dtype, test_batch_size=4):
 def main(args):
     # Initialize DeepSpeed distributed backend.
     deepspeed.init_distributed()
+    _local_rank = int(os.environ.get("LOCAL_RANK"))
+    get_accelerator().set_device(_local_rank)
 
     ########################################################################
     # Step1. Data Preparation.
